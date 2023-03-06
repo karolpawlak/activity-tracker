@@ -17,32 +17,54 @@ import (
 const appStatus string = "ONLINE"
 const port string = ":9001"
 
-// MAIN
+type AppConfig struct {
+	Database *sql.DB
+	Port     string
+	Router   *mux.Router
+}
 
-func main() {
-	fmt.Println("Server started and listening on port " + port)
+func (a *AppConfig) Run() {
+	fmt.Println("Server started and listening on port ", a.Port)
+	log.Fatal(http.ListenAndServe(a.Port, a.Router))
+}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", getRequest).Methods("GET")
-	r.HandleFunc("/", postRequest).Methods("POST")
-	r.HandleFunc("/", putRequest).Methods("PUT")
-	r.HandleFunc("/", deleteRequest).Methods("DELETE")
-
-	http.Handle("/", r)
-
-	log.Fatal(http.ListenAndServe(port, nil))
-
+func (a *AppConfig) Init() {
 	// open database connection
 	db, err := sql.Open("mysql", "root:changeme@tcp(127.0.0.1:3306)/activitytracker_db")
+	a.Database = db
+
 	// handle the error if one occurs when opening the connection
 	checkError(err)
-	// defer the close till after the main function has finished executing
-	defer db.Close()
 
-	createQuery, err := db.Query("INSERT INTO activities VALUES (1, 'Karol Pawlak', 'Running', 9000, 21.1)")
+	// create a router and initialize routes
+	a.Router = mux.NewRouter()
+	a.InitializeRoutes()
+
+	createQuery, err := a.Database.Query("INSERT INTO activities VALUES (2, 'Karol Pawlak', 'Running', 9000, 21.1)")
 	checkError(err)
 
 	defer createQuery.Close()
+
+	// defer the close till after the main function has finished executing
+	// defer db.Close()
+}
+
+func (a *AppConfig) InitializeRoutes() {
+	fmt.Println("Routes initialized")
+	a.Router.HandleFunc("/", getRequest).Methods("GET")
+	a.Router.HandleFunc("/", postRequest).Methods("POST")
+	a.Router.HandleFunc("/", putRequest).Methods("PUT")
+	a.Router.HandleFunc("/", deleteRequest).Methods("DELETE")
+	http.Handle("/", a.Router)
+}
+
+// MAIN
+
+func main() {
+	a := AppConfig{}
+	a.Port = port
+	a.Init()
+	a.Run()
 }
 
 // REQUESTS
@@ -64,6 +86,8 @@ func deleteRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\nDELETE request received", w)
 }
 
+// ERROR CHECKING
+
 func checkError(err error) {
 	if err != nil {
 		log.Fatal(err.Error())
@@ -72,47 +96,12 @@ func checkError(err error) {
 	}
 }
 
-// v1 -----------------------------------------------------------------------
-
-// func main() {
-// 	a := AppConfig{}
-// 	a.port = ":9001"
-// 	a.Init()
-// 	a.Run()
-// }
-
 // REQUESTS
 
 // func basicRequest(w http.ResponseWriter, r *http.Request) {
 // 	fmt.Fprint(w, appStatus)
 // 	a := Activity{"Karol", "Running", 2400, 8.0}
 // 	fmt.Println(a.calculatePace())
-// }
-
-// DATABASE STUFF
-
-// type AppConfig struct {
-// 	DB *sql.DB
-// 	Port string
-// 	Router *mux.Router
-// }
-
-// func (a *AppConfig) Run() {
-// 	fmt.Println("Server started and listening on port ", a.Port)
-// 	log.Fatal(http.ListenAndServe(a.Port, a.Router))
-// }
-
-// func (a *AppConfig) InitializeRoutes() {
-// 	fmt.Println("Routes initialized")
-// 	a.Router.HandleFunc("/", basicRequest)
-// }
-
-// func (a *AppConfig) Init() {
-// 	a.DB, err := sql.Open("sqlite3", "../../test.db")
-// 	checkError(err)
-
-//  a.router = mux.NewRouter()
-//  a.InitializeRoutes()
 // }
 
 // func getRows() {
@@ -126,5 +115,3 @@ func checkError(err error) {
 // 		fmt.Println("Activity: ", a.activityType, " By: ", a.userName, " Distance: ", a.distance)
 // 	}
 // }
-
-// ERROR CHECKING
