@@ -1,31 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+
+	"github.com/gorilla/mux"
 )
 
 // CONSTANTS
 
 const appStatus string = "ONLINE"
 const port string = ":9001"
-
-// STRUCTS & THEIR FUNCTIONS
-
-type Activity struct {
-	userName       string
-	activityType   string
-	activityLength int     // in seconds
-	distance       float32 // in kilometers
-
-}
-
-func (a Activity) calculatePace() float32 {
-	return (float32(a.activityLength) / a.distance) / 60 // return result in minutes
-}
 
 // MAIN
 
@@ -39,9 +29,20 @@ func main() {
 	r.HandleFunc("/", deleteRequest).Methods("DELETE")
 
 	http.Handle("/", r)
-	//http.HandleFunc("/", basicRequest)
 
 	log.Fatal(http.ListenAndServe(port, nil))
+
+	// open database connection
+	db, err := sql.Open("mysql", "root:changeme@tcp(127.0.0.1:3306)/activitytracker_db")
+	// handle the error if one occurs when opening the connection
+	checkError(err)
+	// defer the close till after the main function has finished executing
+	defer db.Close()
+
+	createQuery, err := db.Query("INSERT INTO activities VALUES (1, 'Karol Pawlak', 'Running', 9000, 21.1)")
+	checkError(err)
+
+	defer createQuery.Close()
 }
 
 // REQUESTS
@@ -66,6 +67,7 @@ func deleteRequest(w http.ResponseWriter, r *http.Request) {
 func checkError(err error) {
 	if err != nil {
 		log.Fatal(err.Error())
+		//panic(err.Error())
 		//log.Fatal(err)
 	}
 }
