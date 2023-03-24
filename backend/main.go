@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -30,7 +31,7 @@ func (app *AppConfig) Run() {
 }
 
 func (app *AppConfig) Init() {
-	// open database connection
+	// open database connection - N.B returns a pointer to the database
 	db, err := sql.Open("mysql", "root:changeme@tcp(127.0.0.1:3306)/activitytracker_db")
 	app.Database = db
 
@@ -44,9 +45,9 @@ func (app *AppConfig) Init() {
 
 func (app *AppConfig) InitializeRoutes() {
 	fmt.Println("Routes initialized")
-	app.Router.HandleFunc("/single/{id}", app.getRequestSingle).Methods("GET")
-	app.Router.HandleFunc("/all", app.getRequestAll).Methods("GET")
-	app.Router.HandleFunc("/", postRequest).Methods("POST")
+	app.Router.HandleFunc("/activities/{id}", app.getRequestSingle).Methods("GET")
+	app.Router.HandleFunc("/activities", app.getRequestAggregate).Methods("GET")
+	app.Router.HandleFunc("/", app.postRequest).Methods("POST")
 	app.Router.HandleFunc("/", putRequest).Methods("PUT")
 	app.Router.HandleFunc("/", deleteRequest).Methods("DELETE")
 	http.Handle("/", app.Router)
@@ -92,14 +93,14 @@ func (app *AppConfig) getRequestSingle(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (app *AppConfig) getRequestAll(w http.ResponseWriter, r *http.Request) {
+func (app *AppConfig) getRequestAggregate(w http.ResponseWriter, r *http.Request) {
 	t := time.Now()
 	fmt.Println("\nGET request received on ", t.Format(time.RFC3339), w)
 
 	// execute query and respond to the client
-	activities, err := getAllActivities(app.Database)
+	activities, err := getAggregateActivities(app.Database)
 	if err != nil {
-		fmt.Printf("getRequest error: %s\n", err.Error())
+		fmt.Printf("getRequestAggregate error: %s\n", err.Error())
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 
 		return
@@ -108,11 +109,23 @@ func (app *AppConfig) getRequestAll(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, activities)
 }
 
-func postRequest(w http.ResponseWriter, r *http.Request) {
+func (app *AppConfig) postRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\nPOST request received", w)
 
-	activity := Activity{1, "Karol", "Running", 2400, 8.0}
-	fmt.Println(activity.calculatePace())
+	requestBody, _ := ioutil.ReadAll(r.Body)
+
+	var activity Activity
+	json.Unmarshal(requestBody, &activity)
+
+	err := activity.createNewActivity(app.Database)
+	if err != nil {
+		fmt.Printf("postRequest error: %s\n", err.Error())
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, activity)
 }
 
 func putRequest(w http.ResponseWriter, r *http.Request) {
@@ -129,10 +142,6 @@ func deleteRequest(w http.ResponseWriter, r *http.Request) {
 // 	fmt.Println(a.calculatePace())
 // }
 
-// createQuery, err := app.Database.Query("INSERT INTO activities VALUES (2, 'Karol Pawlak', 'Running', 9000, 21.1)")
-// checkError(err)
-// defer createQuery.Close()
-
 // ERROR CHECKING
 
 func checkError(err error) {
@@ -140,6 +149,7 @@ func checkError(err error) {
 		log.Fatal(err.Error())
 		//panic(err.Error()) // proper error handling instead of panic in your app
 		//log.Fatal(err)
+		//return err
 	}
 }
 

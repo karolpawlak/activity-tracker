@@ -6,7 +6,7 @@ import (
 )
 
 type Activity struct {
-	ID             int     `json:"id"`
+	ID             int     `json:"activity_id"`
 	userName       string  `json:"user_name"`
 	activityType   string  `json:"activity_type"`
 	activityLength int     `json:"activity_length"` // in seconds
@@ -20,11 +20,22 @@ func (a *Activity) calculatePace() float32 {
 
 // DB QUERIES
 
+func (a *Activity) createNewActivity(db *sql.DB) error {
+	response, err := db.Exec("INSERT INTO activities(user_name, activity_type, activity_length, distance) VALUES (?, ?, ?, ?)", a.userName, a.activityType, a.activityLength, a.distance)
+	checkError(err)
+
+	id, err := response.LastInsertId()
+	checkError(err)
+	a.ID = int(id)
+
+	return nil
+}
+
 func (a *Activity) getSingleActivity(db *sql.DB) error {
 	return db.QueryRow("SELECT * FROM activities WHERE id = ?", a.ID).Scan(&a.ID, &a.userName, &a.activityType, &a.activityLength, &a.distance)
 }
 
-func getAllActivities(db *sql.DB) ([]Activity, error) {
+func getAggregateActivities(db *sql.DB) ([]Activity, error) {
 	rows, err := db.Query("SELECT * FROM activities")
 	checkError(err)
 	defer rows.Close()
