@@ -7,21 +7,25 @@ import (
 
 type Activity struct {
 	ID             int     `json:"activity_id"`
-	userName       string  `json:"user_name"`
-	activityType   string  `json:"activity_type"`
-	activityLength int     `json:"activity_length"` // in seconds
-	distance       float32 `json:"distance"`        // in kilometers
+	UserName       string  `json:"user_name"`
+	ActivityType   string  `json:"activity_type"`
+	ActivityLength int     `json:"activity_length"` // in seconds
+	Distance       float32 `json:"distance"`        // in kilometers
 
 }
 
 func (a *Activity) calculatePace() float32 {
-	return (float32(a.activityLength) / a.distance) / 60 // return result in minutes
+	return (float32(a.ActivityLength) / a.Distance) / 60 // return result in minutes
 }
 
 // DB QUERIES
 
 func (a *Activity) createNewActivity(db *sql.DB) error {
-	response, err := db.Exec("INSERT INTO activities(user_name, activity_type, activity_length, distance) VALUES (?, ?, ?, ?)", a.userName, a.activityType, a.activityLength, a.distance)
+	//response, err := db.Exec("INSERT INTO activities(user_name, activity_type, activity_length, distance) VALUES (?, ?, ?, ?)", a.userName, a.activityType, a.activityLength, a.distance)
+	createQuery, err := db.Prepare("INSERT INTO activities(user_name, activity_type, activity_length, distance) VALUES (?, ?, ?, ?)")
+	checkError(err)
+
+	response, err := createQuery.Exec(a.UserName, a.ActivityType, a.ActivityLength, a.Distance)
 	checkError(err)
 
 	id, err := response.LastInsertId()
@@ -32,7 +36,7 @@ func (a *Activity) createNewActivity(db *sql.DB) error {
 }
 
 func (a *Activity) getSingleActivity(db *sql.DB) error {
-	return db.QueryRow("SELECT * FROM activities WHERE id = ?", a.ID).Scan(&a.ID, &a.userName, &a.activityType, &a.activityLength, &a.distance)
+	return db.QueryRow("SELECT * FROM activities WHERE id = ?", a.ID).Scan(&a.ID, &a.UserName, &a.ActivityType, &a.ActivityLength, &a.Distance)
 }
 
 func getAggregateActivities(db *sql.DB) ([]Activity, error) {
@@ -45,10 +49,10 @@ func getAggregateActivities(db *sql.DB) ([]Activity, error) {
 	// for each row, scan the result into an activity composite object
 	for rows.Next() {
 		var activity Activity
-		err = rows.Scan(&activity.ID, &activity.userName, &activity.activityType, &activity.activityLength, &activity.distance)
+		err = rows.Scan(&activity.ID, &activity.UserName, &activity.ActivityType, &activity.ActivityLength, &activity.Distance)
 		checkError(err)
 
-		fmt.Println("ID: ", activity.ID, "Activity: ", activity.activityType, " By: ", activity.userName, " Distance: ", activity.distance)
+		fmt.Println("ID: ", activity.ID, "Activity: ", activity.ActivityType, " By: ", activity.UserName, " Distance: ", activity.Distance)
 		activities = append(activities, activity)
 	}
 

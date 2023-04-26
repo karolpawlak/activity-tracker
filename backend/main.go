@@ -47,7 +47,7 @@ func (app *AppConfig) InitializeRoutes() {
 	fmt.Println("Routes initialized")
 	app.Router.HandleFunc("/activities/{id}", app.getRequestSingle).Methods("GET")
 	app.Router.HandleFunc("/activities", app.getRequestAggregate).Methods("GET")
-	app.Router.HandleFunc("/", app.postRequest).Methods("POST")
+	app.Router.HandleFunc("/activities/new", app.postRequest).Methods("POST")
 	app.Router.HandleFunc("/", putRequest).Methods("PUT")
 	app.Router.HandleFunc("/", deleteRequest).Methods("DELETE")
 	http.Handle("/", app.Router)
@@ -88,7 +88,7 @@ func (app *AppConfig) getRequestSingle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("ID: ", activity.ID, "Activity: ", activity.activityType, " By: ", activity.userName, " Distance: ", activity.distance)
+	fmt.Println("ID: ", activity.ID, "Activity: ", activity.ActivityType, " By: ", activity.UserName, " Distance: ", activity.Distance)
 	respondWithJSON(w, http.StatusOK, activity)
 
 }
@@ -135,12 +135,6 @@ func putRequest(w http.ResponseWriter, r *http.Request) {
 func deleteRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\nDELETE request received", w)
 }
-
-// func basicRequest(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Fprint(w, appStatus)
-// 	a := Activity{"Karol", "Running", 2400, 8.0}
-// 	fmt.Println(a.calculatePace())
-// }
 
 // ERROR CHECKING
 
