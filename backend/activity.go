@@ -28,6 +28,8 @@ func (a *Activity) createNewActivity(db *sql.DB) error {
 	response, err := createQuery.Exec(a.UserName, a.ActivityType, a.ActivityLength, a.Distance)
 	checkError(err)
 
+	createQuery.Close()
+
 	id, err := response.LastInsertId()
 	checkError(err)
 	a.ID = int(id)
@@ -36,7 +38,7 @@ func (a *Activity) createNewActivity(db *sql.DB) error {
 }
 
 func (a *Activity) getSingleActivity(db *sql.DB) error {
-	return db.QueryRow("SELECT * FROM activities WHERE id = ?", a.ID).Scan(&a.ID, &a.UserName, &a.ActivityType, &a.ActivityLength, &a.Distance)
+	return db.QueryRow("SELECT * FROM activities WHERE activity_id = ?", a.ID).Scan(&a.ID, &a.UserName, &a.ActivityType, &a.ActivityLength, &a.Distance)
 }
 
 func getAggregateActivities(db *sql.DB) ([]Activity, error) {
@@ -57,4 +59,23 @@ func getAggregateActivities(db *sql.DB) ([]Activity, error) {
 	}
 
 	return activities, err
+}
+
+func (a *Activity) deleteActivity(db *sql.DB) error {
+	_, err := db.Exec("DELETE FROM activities WHERE activity_id = ?", a.ID)
+	checkError(err)
+
+	return nil
+}
+
+func (a *Activity) updateActivity(db *sql.DB) error {
+	updateQuery, err := db.Prepare("UPDATE activities SET user_name=?, activity_type=?, activity_length=?, distance=? WHERE activity_id=?")
+	checkError(err)
+
+	_, err = updateQuery.Exec(a.UserName, a.ActivityType, a.ActivityLength, a.Distance, a.ID)
+	checkError(err)
+
+	defer updateQuery.Close()
+
+	return nil
 }

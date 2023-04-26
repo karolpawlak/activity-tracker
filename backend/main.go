@@ -48,8 +48,8 @@ func (app *AppConfig) InitializeRoutes() {
 	app.Router.HandleFunc("/activities/{id}", app.getRequestSingle).Methods("GET")
 	app.Router.HandleFunc("/activities", app.getRequestAggregate).Methods("GET")
 	app.Router.HandleFunc("/activities/new", app.postRequest).Methods("POST")
-	app.Router.HandleFunc("/", putRequest).Methods("PUT")
-	app.Router.HandleFunc("/", deleteRequest).Methods("DELETE")
+	app.Router.HandleFunc("/activities/update/{id}", app.putRequest).Methods("PUT")
+	app.Router.HandleFunc("/activities/delete/{id}", app.deleteRequest).Methods("DELETE")
 	http.Handle("/", app.Router)
 }
 
@@ -76,11 +76,11 @@ func (app *AppConfig) getRequestSingle(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	checkError(err)
 
-	var activity Activity
-	activity.ID = int(id)
+	var a Activity
+	a.ID = int(id)
 
 	// execute query and respond to the client
-	err = activity.getSingleActivity(app.Database)
+	err = a.getSingleActivity(app.Database)
 	if err != nil {
 		fmt.Printf("getRequest error: %s\n", err.Error())
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -88,9 +88,7 @@ func (app *AppConfig) getRequestSingle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("ID: ", activity.ID, "Activity: ", activity.ActivityType, " By: ", activity.UserName, " Distance: ", activity.Distance)
-	respondWithJSON(w, http.StatusOK, activity)
-
+	respondWithJSON(w, http.StatusOK, a)
 }
 
 func (app *AppConfig) getRequestAggregate(w http.ResponseWriter, r *http.Request) {
@@ -114,10 +112,10 @@ func (app *AppConfig) postRequest(w http.ResponseWriter, r *http.Request) {
 
 	requestBody, _ := ioutil.ReadAll(r.Body)
 
-	var activity Activity
-	json.Unmarshal(requestBody, &activity)
+	var a Activity
+	json.Unmarshal(requestBody, &a)
 
-	err := activity.createNewActivity(app.Database)
+	err := a.createNewActivity(app.Database)
 	if err != nil {
 		fmt.Printf("postRequest error: %s\n", err.Error())
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -125,15 +123,55 @@ func (app *AppConfig) postRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, activity)
+	respondWithJSON(w, http.StatusCreated, a)
 }
 
-func putRequest(w http.ResponseWriter, r *http.Request) {
+func (app *AppConfig) putRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\nPUT request received", w)
+
+	// get variable from the request and populate in activity object
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	checkError(err)
+
+	var a Activity
+	requestBody, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(requestBody, &a)
+	a.ID = int(id)
+
+	// execute query and respond to the client
+	err = a.updateActivity(app.Database)
+	if err != nil {
+		fmt.Printf("putRequest error: %s\n", err.Error())
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, a)
 }
 
-func deleteRequest(w http.ResponseWriter, r *http.Request) {
+func (app *AppConfig) deleteRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("\nDELETE request received", w)
+
+	// get variable from the request and populate in activity object
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	checkError(err)
+
+	var a Activity
+	a.ID = int(id)
+
+	// execute query and respond to the client
+	err = a.deleteActivity(app.Database)
+	if err != nil {
+		fmt.Printf("deleteRequest error: %s\n", err.Error())
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, a)
 }
 
 // ERROR CHECKING
