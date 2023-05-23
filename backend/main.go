@@ -17,7 +17,7 @@ import (
 // CONSTANTS
 
 const appStatus string = "ONLINE"
-const port string = ":9001"
+const port string = ":8080"
 
 type AppConfig struct {
 	Database *sql.DB
