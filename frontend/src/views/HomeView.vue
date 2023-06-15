@@ -1,7 +1,6 @@
 <template>
   <div class="home">
-    <img id="tanzuLogo" alt="Tanzu logo" src="../assets/logo.png">
-    <HelloWorld msg="Tanzu Let's Get Moving"/>
+    <HelloWorld msg="Welcome"/>
   </div>
 </template>
 
@@ -16,10 +15,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-#tanzuLogo {
-  width: 5%;
-  height: auto;
-}
-</style>
